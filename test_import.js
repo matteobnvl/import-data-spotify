@@ -52,7 +52,7 @@ async function insert() {
             }
         }
 
-        client.query(`
+        await client.query(`
             INSERT INTO "Playlist" ("playlist_id", "name", "collaborative", "modified_at", "num_followers", "num_edits", "num_albums", "num_tracks", "num_artists", "duration_ms")
             VALUES ${Array.from(valuesPlaylist).join(',')}
             ON CONFLICT ("playlist_id") DO NOTHING;
