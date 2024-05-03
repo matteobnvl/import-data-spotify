@@ -23,114 +23,66 @@ async function insert() {
         console.log('Connection database')
         await client.connect()
 
-        if (jsonData['playlists']) {
-            const playlists = jsonData['playlists']
+        let valuesAlbum = new Set()
+        let valuesArtist = new Set()
+        let valuesMusic = new Set()
+        let valuesMusicPlaylist = new Set()
+        let valuesPlaylist = new Set()
 
-            const artistIds = await getArtists()
-            const albumIds = await getAlbums()
-            const musicIds = await getMusics()
-            const playlistIds = await getPlaylists()
+        for (const playlist of jsonData['playlists']) {
 
-            const valuesAlbum = []
-            const valuesArtist = []
-            const valuesMusic = []
-            const valuesMusicPlaylist = []
-            const valuesPlaylist = []
+            valuesPlaylist.add(`(
+                '${playlist['pid'] +1 }',
+                '${playlist['name'].replace(/'/g, "''")}',
+                '${playlist['collaborative']}',
+                '${playlist['modified_at']}',
+                '${playlist['num_followers']}',
+                '${playlist['num_edits']}',
+                '${playlist['num_albums']}',
+                '${playlist['num_tracks']}',
+                '${playlist['num_artists']}',
+                '${playlist['duration_ms']}'
+            )`)
 
-            for (const playlist of playlists) {
-                
-                if (playlistIds.includes((playlist['pid'] + 1))) {
-                    continue
-                }
-                valuesPlaylist.push(`(
-                    '${playlist['name'].replace(/'/g, "''")}',
-                    '${playlist['collaborative']}',
-                    '${playlist['modified_at']}',
-                    '${playlist['num_followers']}',
-                    '${playlist['num_edits']}',
-                    '${playlist['num_albums']}',
-                    '${playlist['num_tracks']}',
-                    '${playlist['num_artists']}',
-                    '${playlist['duration_ms']}'
-                )`)
-
-                for (const track of playlist['tracks']) {
-                    if (!albumIds.includes(track['album_uri'])) {
-
-                        if (!artistIds.includes(track['artist_uri'])) {
-                            valuesArtist.push(`('${track['artist_uri']}', '${track['artist_name'].replace(/'/g, "''")}')`)
-                            artistIds.push(track['artist_uri'])
-                        }
-
-                        valuesAlbum.push(`('${track['album_uri']}', '${track['album_name'].replace(/'/g, "''")}', '${track['artist_uri']}')`)
-                        albumIds.push(track['album_uri'])
-                    }
-
-
-                    if (!musicIds.includes(track['track_uri'])) {
-
-                        valuesMusic.push(`('${track['track_uri']}', '${track['track_name'].replace(/'/g, "''")}', '${track['duration_ms']}', '${track['album_uri']}')`)
-                        musicIds.push(track['track_uri'])
-                    }
-
-                    valuesMusicPlaylist.push(`('${playlist['pid'] + 1}', '${track['track_uri']}', '${track['pos']}')`)
-                }
+            for (const track of playlist['tracks']) {
+                valuesArtist.add(`('${track['artist_uri']}', '${track['artist_name'].replace(/'/g, "''")}')`)
+                valuesAlbum.add(`('${track['album_uri']}', '${track['album_name'].replace(/'/g, "''")}', '${track['artist_uri']}')`)
+                valuesMusic.add(`('${track['track_uri']}', '${track['track_name'].replace(/'/g, "''")}', '${track['duration_ms']}', '${track['album_uri']}')`)
+                valuesMusicPlaylist.add(`('${playlist['pid'] + 1}', '${track['track_uri']}', '${track['pos']}')`)
             }
         }
 
+        client.query(`
+            INSERT INTO "Playlist" ("playlist_id", "name", "collaborative", "modified_at", "num_followers", "num_edits", "num_albums", "num_tracks", "num_artists", "duration_ms")
+            VALUES ${Array.from(valuesPlaylist).join(',')}
+            ON CONFLICT ("playlist_id") DO NOTHING;
+        `);
+
+        await client.query(`
+            INSERT INTO "Artist" ("artist_uri", "name")
+            VALUES ${Array.from(valuesArtist).join(',')}
+            ON CONFLICT ("artist_uri") DO NOTHING;
+        `)
+
+        await client.query(`
+            INSERT INTO "Album" ("album_uri", "name", "artist_uri")
+            VALUES ${Array.from(valuesAlbum).join(',')}
+            ON CONFLICT ("album_uri") DO NOTHING;
+        `)
+
+        await client.query(`
+            INSERT INTO "Music" ("track_uri", "title", "duration_ms", "album_uri")
+            VALUES ${Array.from(valuesMusic).join(',')}
+            ON CONFLICT ("track_uri") DO NOTHING;
+        `)
+
+        await client.query(`
+            INSERT INTO "Music_Playlist" ("playlist_id", "track_uri", "pos")
+            VALUES ${Array.from(valuesMusicPlaylist).join(',')}
+        `)
+    
         await client.end();
     })
-}
-
-
-async function getArtists() {
-    try {
-        const result = await client.query(`
-            SELECT artist_uri FROM "Artist"
-        `)
-        const artists = result.rows.map(row => row.artist_uri)
-        return artists
-
-    } catch (err) {
-        console.error(err)
-    }
-}
-
-async function getAlbums() {
-    try {
-        const result = await client.query(`
-            SELECT album_uri FROM "Album"
-        `)
-        const albums = result.rows.map(row => row.album_uri)
-        return albums
-
-    } catch (err) {
-        console.error(err)
-    }
-}
-
-async function getMusics() {
-    try {
-        const result = await client.query(`
-            SELECT track_uri FROM "Music"
-        `)
-        return result.rows.map(row => row.track_uri)
-
-    } catch (err) {
-        console.error(err)
-    }
-}
-
-async function getPlaylists() {
-    try {
-        const result = await client.query(`
-            SELECT playlist_id FROM "Playlist"
-        `)
-        return result.rows.map(row => row.playlist_id)
-
-    } catch (err) {
-        console.error(err)
-    }
 }
 
 insert()
