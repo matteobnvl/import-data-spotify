@@ -1,8 +1,6 @@
-version: '3.9'
-
 services:
   database:
-    container_name: api_db_postgresql
+    container_name: api_spotify_db_postgresql
     image: postgres:latest
     ports:
       - '127.0.0.1:5432:5432'
@@ -11,4 +9,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     volumes:
-      - /db/postgres:/var/lib/postgresql/data:rw
+      - pgdata:/var/lib/postgresql/data:rw
+
+volumes:
+  pgdata:

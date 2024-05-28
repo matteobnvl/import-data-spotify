@@ -14,6 +14,12 @@ async function create() {
         await client.connect()
         console.log('Connection database succesfull')
         await client.query(`
+            DROP TABLE IF EXISTS "Music_Playlist";
+            DROP TABLE IF EXISTS "Playlist";
+            DROP TABLE IF EXISTS "Music";
+            DROP TABLE IF EXISTS "Album";
+            DROP TABLE IF EXISTS "Artist";
+
             CREATE TABLE IF NOT EXISTS "Artist" (
                 "artist_uri" TEXT NOT NULL,
                 "name" TEXT NOT NULL,
