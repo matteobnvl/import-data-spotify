@@ -3,6 +3,8 @@
 ## création de la bdd
 
 ```
+npm install
+
 docker compose up -d --build
 
 node create_table.js
